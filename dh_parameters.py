@@ -48,12 +48,12 @@ def LIF_intrinsics(E_l = -70 * mV,
 		params['refractory_eq'] = 'tau_r'
 
 
-def adex_intrinsics(E_l = -70 * mV,
+def adex_intrinsics(E_l = -60 * mV,
 					   E_e = 0 * mV,
 					   E_i = -70 * mV,
 					   C_m = 40 * pF,
 					   V_th = -40 * mV,
-					   V_r = -50 * mV,
+					   V_r = -60 * mV,
 					   tau_e = 2 * ms,
 					   tau_i = 5 * ms,
 					   tau_r = 1 * ms,
@@ -61,8 +61,8 @@ def adex_intrinsics(E_l = -70 * mV,
 					   g_l_sigma = 0.25 * nS,
 					   I_ex_mu = 0 * pA,
 					   I_ex_sigma = 0 * pA,
-					   b = 8 * pA,
-					   alpha = 2 * nS,
+					   b = 5 * pA,
+					   alpha = 0.2 * nS,
 					   Delta_T = 1* mV,                 
 					   tau_u = 150 * ms):
 
@@ -388,7 +388,7 @@ def get_afferent_params(cell_type, **kwargs):
 			
 			# connectivity
 			
-			params['outputs']['pr_noci'] = {'p':0.15,
+			params['outputs']['pr_noci'] = {'p':0.3,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
@@ -396,20 +396,20 @@ def get_afferent_params(cell_type, **kwargs):
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['e_grp'] = {'p':0.15,
-												 'w_mu':2 * nS,
+			params['outputs']['e_grp'] = {'p':0.05,
+												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
 			params['outputs']['i_gal'] = {'p':0.15,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_nnos'] = {'p':0.15,
-												 'w_mu':2 * nS,
+			params['outputs']['i_nnos'] = {'p':0.05,
+												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_npy'] = {'p':0.15,
-												 'w_mu':2 * nS,
+			params['outputs']['i_npy'] = {'p':0.05,
+												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
 			params['outputs']['i_calb2'] = {'p':0.15,
@@ -431,11 +431,11 @@ def get_afferent_params(cell_type, **kwargs):
 											 'w_mu':2 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-			params['outputs']['e_vertical'] = {'p':0.15,
+			params['outputs']['e_vertical'] = {'p':0.3,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['e_grp'] = {'p':0.15,
+			params['outputs']['e_grp'] = {'p':0,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
@@ -443,14 +443,18 @@ def get_afferent_params(cell_type, **kwargs):
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_nnos'] = {'p':0.15,
+			params['outputs']['i_nnos'] = {'p':0.05,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_npy'] = {'p':0.15,
-												 'w_mu':2 * nS,
+			params['outputs']['i_npy'] = {'p':0.05,
+												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
+			params['outputs']['i_calb2'] = {'p':0,
+												 'w_mu':2 * nS,
+												 'w_sigma': 0.1 * nS,
+												 'conductance_name':params['neurotransmitter']}									 
 			
 		elif cell_type == 'trpm8':
 			params['N'] = 20
@@ -539,15 +543,15 @@ def get_afferent_params(cell_type, **kwargs):
 			
 			# connectivity
 			
-			params['outputs']['e_nts'] = {'p':0.15,
+			params['outputs']['e_nts'] = {'p':0.3,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['e_tac2'] = {'p':0.15,
+			params['outputs']['e_tac2'] = {'p':0.3,
 												 'w_mu':2 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_pv'] = {'p':0.15,
+			params['outputs']['i_pv'] = {'p':0.07,
 												 'w_mu':10 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
@@ -570,16 +574,16 @@ def get_afferent_params(cell_type, **kwargs):
 			
 			# connectivity
 			
-			params['outputs']['e_nts'] = {'p':0.1,
+			params['outputs']['e_nts'] = {'p':0.3,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-			params['outputs']['e_tac2'] = {'p':0.1,
+			params['outputs']['e_tac2'] = {'p':0.3,
 												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
-			params['outputs']['i_pv'] = {'p':0.15,
-												 'w_mu':1 * nS,
+			params['outputs']['i_pv'] = {'p':0.07,
+												 'w_mu':5 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
 			params['outputs']['i_gal'] = {'p':0.15,
