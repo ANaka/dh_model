@@ -614,11 +614,48 @@ def a_delta_fibers():
 def afferent_types():
 	return c_fibers() + a_delta_fibers() + ['AB_ltmr']
 
+def get_N(nts):
+	Ns = []
+	for nt in nts:
+		params = get_neuron_params(nt)
+		Ns.append(params['N'])
+	return Ns
+
+def get_N_dict():
+	N_dict = {}
+	for nt in neuron_types():
+		print(nt)
+		params = get_neuron_params(nt)
+		N_dict[nt] = params['N']
+	return N_dict
+
+def intrinsics_table_w_units():
+	df = intrinsics_table()
+	columns = df.columns
+	units = []
+	cnames = []
+	for column in columns:
+	    unit = column.split(' ')[1][1:-1]
+	    cnames.append(column.split(' ')[0])
+	    units.append(unit)
+	unit_df = pd.DataFrame(data = [units],columns = columns, index = ['units'])
+	df = df.append(unit_df)
+	df.columns = cnames
+	return df
+
+def intrinsics_df_2_dict(intrinsics_df, cell_type):
+    intrinsics = {}
+    parameters = intrinsics_df.columns
+    for param in parameters:
+        tempstr = str(intrinsics_df.loc[cell_type,param]) + ' * ' + intrinsics_df.loc['units',param]
+        intrinsics[param] = eval(tempstr)
+    return intrinsics
+
 def intrinsics_table():
 	dfs = []
 	for nt in neuron_types():
 		intrinsics = {}
-		intrinsics_ = get_neuron_params(nt)['outputs']
+		intrinsics_ = get_neuron_params(nt)['intrinsics']
 		intrinsics['E_l (mV)'] = intrinsics_['E_l'] * 10 ** 3 
 		intrinsics['E_e (mV)'] = intrinsics_['E_e'] * 10 ** 3
 		intrinsics['E_i (mV)'] = intrinsics_['E_i'] * 10 ** 3
@@ -664,6 +701,6 @@ def interneuronal_connectivity_tables():
 	p = interneuronal_output_param_table(param_name = 'p')
 	w_mu = interneuronal_output_param_table(param_name = 'w_mu')
 	w_sigma = interneuronal_output_param_table(param_name = 'w_sigma')
+	g_type = interneuronal_output_param_table(param_name = 'conductance_name')
+	return p, w_mu, w_sigma,g_type
 
-
-	return p, w_mu, w_sigma
