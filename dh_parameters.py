@@ -239,7 +239,6 @@ def get_neuron_params(cell_type, **kwargs):
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
 
-
 	elif cell_type == 'e_cck':
 		params['N'] = 90
 		params['location'] = ['2iv','3']
@@ -597,7 +596,7 @@ def projection_neuron_types():
 	return ['pr_noci','pr_pruri','pr_WDR']
 
 def excitatory_types():
-	return ['e_vertical','e_tac1','e_grp','e_nts','e_tac2','e_ckk','e_grpr']
+	return ['e_vertical','e_tac1','e_grp','e_nts','e_tac2','e_cck','e_grpr']
 
 def inhibitory_types():
 	return ['i_gal','i_nnos','i_npy','i_calb2','i_pv']
@@ -621,9 +620,9 @@ def get_N(nts):
 		Ns.append(params['N'])
 	return Ns
 
-def get_N_dict():
+def get_N_dict(nts):
 	N_dict = {}
-	for nt in neuron_types():
+	for nt in nts:
 		print(nt)
 		params = get_neuron_params(nt)
 		N_dict[nt] = params['N']
@@ -678,10 +677,32 @@ def intrinsics_table():
 
 	return pd.concat(dfs)
 
-def interneuronal_output_param_table(param_name = 'p'):
-	
-	dfs = []
+def get_Ns():
+	nts = neuron_types()
+	ats = afferent_types()
+	Ns={}
+	try:
+		for nt in nts:
+			Ns[nt] = get_neuron_params(nt)['N']
 
+		for nt in ats:
+			Ns[nt] = get_afferent_params(nt)['N']
+	except:
+		print(nt)
+	return Ns
+
+def get_delays():
+	ats = afferent_types()
+	delays={}
+	try:
+		for nt in ats:
+			delays[nt] = get_afferent_params(nt)['delay']
+	except:
+		print(nt)
+	return delays
+
+def interneuronal_output_param_table(param_name = 'p'):
+	dfs = []
 	nts = neuron_types()
 	for pre in nts:
 		output_param = {}
@@ -691,16 +712,41 @@ def interneuronal_output_param_table(param_name = 'p'):
 			try:
 				output_param[post] = outputs[post][param_name]
 			except:
-				output_param[post] = '?'
+				output_param[post] = np.NaN
 
 		dfs.append(pd.DataFrame(output_param,index = [pre]))
 	return pd.concat(dfs)
 
 def interneuronal_connectivity_tables():
-	
-	p = interneuronal_output_param_table(param_name = 'p')
-	w_mu = interneuronal_output_param_table(param_name = 'w_mu')
-	w_sigma = interneuronal_output_param_table(param_name = 'w_sigma')
-	g_type = interneuronal_output_param_table(param_name = 'conductance_name')
-	return p, w_mu, w_sigma,g_type
+	output_dfs = {}
+	output_dfs['p'] = interneuronal_output_param_table(param_name = 'p')
+	output_dfs['w_mu'] = interneuronal_output_param_table(param_name = 'w_mu')
+	output_dfs['w_sigma'] = interneuronal_output_param_table(param_name = 'w_sigma')
+	output_dfs['conductance_name'] = interneuronal_output_param_table(param_name = 'conductance_name')
+	return output_dfs
+
+def afferent_output_param_table(param_name = 'p'):
+	dfs = []
+	ats = afferent_types()
+	nts = neuron_types()
+	for pre in ats:
+		output_param = {}
+
+		outputs = get_afferent_params(pre)['outputs']
+		for post in nts:
+			try:
+				output_param[post] = outputs[post][param_name]
+			except:
+				output_param[post] = np.NaN
+
+		dfs.append(pd.DataFrame(output_param,index = [pre]))
+	return pd.concat(dfs)
+
+def afferent_connectivity_tables():
+	output_dfs = {}
+	output_dfs['p'] = afferent_output_param_table(param_name = 'p')
+	output_dfs['w_mu'] = afferent_output_param_table(param_name = 'w_mu')
+	output_dfs['w_sigma'] = afferent_output_param_table(param_name = 'w_sigma')
+	output_dfs['conductance_name'] = afferent_output_param_table(param_name = 'conductance_name')
+	return output_dfs
 
