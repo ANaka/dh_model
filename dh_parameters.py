@@ -165,7 +165,7 @@ def get_neuron_params(cell_type, **kwargs):
 		params['morphology'] = 'vertical'
 		# connectivity
 		
-		params['outputs']['pr_noci'] = {'p':0.15,
+		params['outputs']['pr_noci'] = {'p':0.25,
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
@@ -206,7 +206,7 @@ def get_neuron_params(cell_type, **kwargs):
 		params['morphology'] = 'radial'
 		# connectivity
 		
-		params['outputs']['e_grp'] = {'p':0.15,
+		params['outputs']['e_grp'] = {'p':0.2,
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
@@ -230,11 +230,11 @@ def get_neuron_params(cell_type, **kwargs):
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_nts'] = {'p':0.15,
+		params['outputs']['e_nts'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_tac2'] = {'p':0.15,
+		params['outputs']['e_tac2'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
@@ -274,7 +274,7 @@ def get_neuron_params(cell_type, **kwargs):
 		params['morphology'] = '?'
 		# connectivity
 		
-		params['outputs']['e_vertical'] = {'p':0.15,
+		params['outputs']['e_vertical'] = {'p':0.2,
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
@@ -282,15 +282,15 @@ def get_neuron_params(cell_type, **kwargs):
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_tac1'] = {'p':0.15,
+		params['outputs']['e_tac1'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_nts'] = {'p':0.15,
+		params['outputs']['e_nts'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_tac2'] = {'p':0.15,
+		params['outputs']['e_tac2'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
@@ -306,7 +306,7 @@ def get_neuron_params(cell_type, **kwargs):
 		params['morphology'] = '?'
 		# connectivity
 		
-		params['outputs']['pr_noci'] = {'p':0.15,
+		params['outputs']['pr_noci'] = {'p':0.3,
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
@@ -346,11 +346,11 @@ def get_neuron_params(cell_type, **kwargs):
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
-		params['outputs']['i_gal'] = {'p':0.15,
+		params['outputs']['i_gal'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
-		params['outputs']['i_nnos'] = {'p':0.15,
+		params['outputs']['i_nnos'] = {'p':0.2,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
@@ -362,14 +362,15 @@ def get_neuron_params(cell_type, **kwargs):
 		params['morphology'] = '?'
 		# connectivity
 		
-		params['outputs']['e_nts'] = {'p':0.15,
+		params['outputs']['e_nts'] = {'p':0.3,
 										 'w_mu':1 * nS,
 										 'w_sigma': 0.1 * nS,
 										 'conductance_name':params['neurotransmitter']}
-		params['outputs']['e_tac2'] = {'p':0.15,
+		params['outputs']['e_tac2'] = {'p':0.3,
 											 'w_mu':1 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
+
 
 	return params
 
@@ -427,6 +428,10 @@ def get_afferent_params(cell_type, **kwargs):
 			# connectivity
 			
 			params['outputs']['pr_noci'] = {'p':0.15,
+											 'w_mu':2 * nS,
+											 'w_sigma': 0.1 * nS,
+											 'conductance_name':params['neurotransmitter']}
+			params['outputs']['pr_WDR'] = {'p':0.15,
 											 'w_mu':2 * nS,
 											 'w_sigma': 0.1 * nS,
 											 'conductance_name':params['neurotransmitter']}
