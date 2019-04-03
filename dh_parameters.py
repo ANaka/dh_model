@@ -594,7 +594,33 @@ def get_afferent_params(cell_type, **kwargs):
 												 'w_mu':1 * nS,
 												 'w_sigma': 0.1 * nS,
 												 'conductance_name':params['neurotransmitter']}
+
+		elif cell_type == 'corticospinal':
+			params['N'] = 40
+			params['delay'] =0 * ms
+			params['location'] = ['2iv','3','4']
+			params['neurotransmitter'] = 'e'
+			
+			# connectivity
+			
+			params['outputs']['e_nts'] = {'p':0.3,
+											 'w_mu':1 * nS,
+											 'w_sigma': 0.1 * nS,
+											 'conductance_name':params['neurotransmitter']}
+			params['outputs']['e_tac2'] = {'p':0.3,
+												 'w_mu':1 * nS,
+												 'w_sigma': 0.1 * nS,
+												 'conductance_name':params['neurotransmitter']}
+			params['outputs']['i_pv'] = {'p':0.07,
+												 'w_mu':5 * nS,
+												 'w_sigma': 0.1 * nS,
+												 'conductance_name':params['neurotransmitter']}
+			params['outputs']['i_gal'] = {'p':0.15,
+												 'w_mu':1 * nS,
+												 'w_sigma': 0.1 * nS,
+												 'conductance_name':params['neurotransmitter']}
 		return params
+
 
 
 def projection_neuron_types():
