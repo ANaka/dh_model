@@ -1,5 +1,202 @@
 from brian2 import *
 from brian2.units.fundamentalunits import get_unit_for_display
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+class sim(dict):
+	def __init__(self,*args,**kwargs):
+		super(sim,self).__init__(*args,**kwargs)
+		self['dt'] = 0.1 * ms
+		self['intrinsics_df'] = []
+		self['adf'] = []
+		self['ndf'] = []
+		self['network'] = []
+		self['nts'] = []
+		self['ats'] = []
+		self['ngs'] = []
+		self['ags'] = []
+		self['synapses'] = []
+		self['Ns'] = []
+		self['spike_mons'] = []
+		self['state_mons'] = []
+	
+	def initialize_sim_objects(self):
+		ngs = {}
+		spike_mons = {}
+		poprates = {}
+		synapses = []
+		state_mons = {}
+		for nt in self['nts']:
+			ng = adex_group(name = nt, N = self['Ns'][nt])
+			ng.set_intrinsics_from_dfs(self['intrinsics_df'])
+			# ng.initialize_I_ex_array(duration,self['dt'])
+			ngs[nt] = ng
+			spike_mons[nt]= SpikeMonitor(ngs[nt], record=True)  
+			poprates[nt] = PopulationRateMonitor(ngs[nt])
+			state_mons[nt]= StateMonitor(ngs[nt],variables = 'v', record=False) 
+			
+		ags = {}
+		for at in self['ats']:
+			ags[at] = afferent_group(name = at, N = self['Ns'][at])   
+			
+		s = connect_all_ngs_from_dfs(ngs,self['ndf'])
+		s.update(connect_all_ags_from_dfs(ngs,ags,self['adf']))
+
+		net = Network(ngs,ags,s,spike_mons,state_mons)
+		net.store()
+		self['network'] = net
+		self['ngs'] = ngs
+		self['ags'] = ags
+		self['synapses'] = s
+		self['spike_mons'] = spike_mons
+		self['state_mons'] = state_mons
+
+	def initialize_inputs(self, trial_durations):
+		num_trials = len(trial_durations)
+		ags = self['ags']
+		ngs = self['ngs']
+		inputs = {}
+		for trial in range(num_trials):
+			inputs[trial] = {}
+			for at,ag in ags.items():
+				inputs[trial][at] = {}
+				inputs[trial][at]['spike_times'] = ag._spike_time
+				inputs[trial][at]['indices'] = ag._neuron_index
+			for nt,ng in ngs.items():
+				inputs[trial][nt] = {}
+				inputs[trial][nt]['I_ex'] = ng.initialize_I_ex_array(trial_durations[trial],self['dt'])
+			inputs[trial]['trial_duration'] = trial_durations[trial]
+		self['inputs'] = inputs
+
+	def finalize_inputs(self):
+		I_ex_arrays ={}
+		inputs = self['inputs']
+		for nt in self['ngs'].keys():
+			I_ex_arrays[nt]=[]
+			for trial,this_input in inputs.items():
+				I_ex_arrays[nt].append(this_input[nt]['I_ex'])
+			I_ex_arrays[nt] = np.concatenate(I_ex_arrays[nt])
+		
+		#need to test    
+		ag_inputs_full_trial = {}
+		for at in self['ags'].keys():
+			ag_inputs_full_trial[at] = {}
+			t_start = 0 * second
+			ag_inputs_full_trial[at]['spike_times'] =[]
+			ag_inputs_full_trial[at]['indices'] = []
+			for trial,this_input in inputs.items():
+				ag_inputs_full_trial[at]['spike_times'].append(this_input[at]['spike_times'] + t_start)
+				ag_inputs_full_trial[at]['indices'].append(this_input[at]['indices'])
+				t_start += this_input['trial_duration']
+			ag_inputs_full_trial[at]['spike_times'] =np.concatenate(ag_inputs_full_trial[at]['spike_times'])*second
+			ag_inputs_full_trial[at]['indices'] =np.concatenate(ag_inputs_full_trial[at]['indices'])
+
+		self['I_ex_arrays'] = I_ex_arrays
+		self['ag_inputs_full_trial'] = ag_inputs_full_trial
+		self['sim_duration'] = list(I_ex_arrays.values())[0].shape[0]*self['dt']
+
+
+	def initialize_target_outputs(self):
+		target_outputs = {}
+		for trial,this_input in self['inputs'].items():
+			target_outputs[trial] = {}
+		self['target_outputs'] = target_outputs
+
+
+	def run_sim(self):
+		target_outputs = self['target_outputs']		
+		I_ex_full = self['I_ex_arrays']
+		ag_inputs_full = self['ag_inputs_full_trial']
+		inputs = self['inputs']
+		for nt,ng in self['ngs'].items():
+			ng.set_I_ex_from_array(I_ex_full[nt],self['dt'])
+		for at,ag in self['ags'].items():
+			ag.set_spikes(indices = ag_inputs_full[at]['indices'], times = ag_inputs_full[at]['spike_times']) 
+		
+		num_trials = len(inputs)
+		for trial in range(num_trials):
+			duration = inputs[trial]['trial_duration']
+			for nt,ng in self['ngs'].items():
+				ng.reset_variables()
+			
+			self['network'].run(duration)
+		
+
+		def get_trialwise_spikes(self):
+			observed_spikes = {}
+			trial_start = 0 * ms
+			inputs = self['inputs']
+			for trial, this_input in inputs.items():
+				observed_spikes[trial] = {}
+				trial_duration = this_input['trial_duration']
+				trial_end = trial_start + trial_duration
+				for nt in self['spike_mons'].keys():
+					N = self['ngs'][nt].N
+					observed_spikes[trial][nt]={}
+					observed_spikes[trial][nt]['counts'] = []
+					observed_spikes[trial][nt]['rates'] = []
+					spike_trains = self['spike_mons'][nt].spike_trains()
+					for neuron,spike_times in spike_trains.items():
+						current_trial_spike_times = spike_times[(spike_times>=trial_start) & (spike_times<trial_end)]
+						current_trial_spike_count = len(current_trial_spike_times)
+						observed_spikes[trial][nt]['counts'].append(current_trial_spike_count)
+						observed_spikes[trial][nt]['rates'].append(current_trial_spike_count/trial_duration*second)
+						
+					observed_spikes[trial][nt]['mean_count'] = mean(observed_spikes[trial][nt]['counts'])
+					observed_spikes[trial][nt]['mean_rate'] = mean(observed_spikes[trial][nt]['rates'])
+				trial_start += trial_duration
+			return observed_spikes
+			
+	def get_weight_matrix(self):
+		pres = []
+		posts = []
+		pre_type =[]
+		post_type = []
+		conn_type = []
+		ws = []
+
+		for conn_name in self['synapses']:    
+			pre,post = conn_name.split('_to_')
+			try:
+				pre_N = self['ngs'][pre].N
+			except:
+				pre_N = self['ags'][pre].N
+			post_N = self['ngs'][post].N
+
+			for i in range(pre_N):
+				pre_name = pre+'_'+str(i)
+				for j in range(post_N):
+					post_name = post+'_'+str(j)
+					pres.append(pre_name)
+					posts.append(post_name)
+					pre_type.append(pre)
+					post_type.append(post)
+					conn_type.append(conn_name)
+					if self['synapses'][conn_name].w_[i,j]:
+						ws.append(np.array(self['synapses'][conn_name].w_[i,j])[0])
+					else:
+						ws.append(0)
+		wdf = pd.DataFrame({'pre':pres,
+			'post':posts,
+			'pre_type':pre_type,
+			'post_type':post_type,
+			'conn_type':conn_type,
+			'w':ws})
+		return wdf, wdf.pivot(index = 'pre',columns = 'post',values = 'w')
+
+	def plot_ag_psths(self,binsize = 1*ms, fig_kwargs = {}):
+		f,ax = plt.subplots(len(self['ags']),1, **fig_kwargs)
+		bins = np.arange(0,self['sim_duration'],binsize)
+		ax.flatten()
+		for i,at in enumerate(self['ats']):
+			psth,bins = np.histogram(self['ag_inputs_full_trial'][at]['spike_times'],bins)
+			ax[i].plot(bins[:-1],psth)
+		plt.tight_layout()
+		return f,ax
+
+	  
+
 
 class adex_group(NeuronGroup):
 	def __init__(self, name, N = 1):
@@ -28,23 +225,24 @@ class adex_group(NeuronGroup):
 		self.v = self.namespace['E_l']  
 		self.u = '0 * pA'
 	
-	def initialize_I_ex_array(self,duration,sim_dt):
-		tb = np.arange(0,duration,sim_dt)
+	def initialize_I_ex_array(self,duration,dt):
+		tb = np.arange(0,duration,dt)
 		I_ex_mu = self.namespace['I_ex_mu']
 		I_ex_sigma = self.namespace['I_ex_sigma']
 		I_ex_template = (I_ex_mu + I_ex_sigma * randn(self.N))
 		I_ex_array = np.tile(I_ex_template, (tb.shape[0],1))
 		self.namespace['I_ex_array'] = np.array(I_ex_array)
-		self.namespace['I_ex'] = TimedArray(I_ex_array,sim_dt)
+		self.namespace['I_ex'] = TimedArray(I_ex_array,dt)
+		return self.namespace['I_ex_array']
 	
-	def set_I_ex_from_array(self,I_ex_array,sim_dt):
+	def set_I_ex_from_array(self,I_ex_array,dt):
 		assert type(I_ex_array) is numpy.ndarray
-		tb = np.arange(0,len(I_ex_array))*sim_dt
+		tb = np.arange(0,len(I_ex_array))*dt
 		self.namespace['I_ex_array'] = I_ex_array
-		self.namespace['I_ex'] = TimedArray(I_ex_array * pA,sim_dt)
+		self.namespace['I_ex'] = TimedArray(I_ex_array * pA,dt)
 	
-	def add_I_ex_step(self,duration, sim_dt, start, stop, amplitude, indices = None):
-		tb = np.arange(0,duration,sim_dt)
+	def add_I_ex_step(self,duration, dt, start, stop, amplitude, indices = None):
+		tb = np.arange(0,duration,dt)
 		I_ex_template = np.zeros((len(tb),self.N))
 		
 		if not indices:
@@ -56,7 +254,7 @@ class adex_group(NeuronGroup):
 				for i in indices:
 					I_ex_template[t_ind,i] = amplitude
 		self.namespace['I_ex_array'] = np.array(I_ex_template)
-		self.namespace['I_ex'] = TimedArray(I_ex_template,sim_dt)
+		self.namespace['I_ex'] = TimedArray(I_ex_template,dt)
 
 	def set_cell_type(self, cell_type):
 		params = dp.get_neuron_params(cell_type)
@@ -113,7 +311,9 @@ class adex_group(NeuronGroup):
 					outputs[post][param_name] = param[post] * siemens
 				else:
 					outputs[post][param_name] = param[post]
-		self.namespace['outputs'] = outputs        
+		self.namespace['outputs'] = outputs  
+
+
 		
 class afferent_group(SpikeGeneratorGroup):
 	def __init__(self, name, N = 1):
@@ -190,23 +390,23 @@ def generate_periodic_spike_times(rate, start_time, stop_time):
 	spike_times = np.linspace(start_time, start_time + true_duration, num_spikes)
 	return spike_times
 
-def gaussian_psth(duration,sim_dt,mu = 0 * ms, sigma = 0 * ms):
-		time_bins = np.arange(0,duration,sim_dt)
+def gaussian_psth(duration,dt,mu = 0 * ms, sigma = 0 * ms):
+		time_bins = np.arange(0,duration,dt)
 		mu_ = mu 
 		sigma_ = sigma  
 		psth = (1/(sigma * np.sqrt(2 * np.pi)) *np.exp( - (time_bins - mu)**2 / (2 * sigma**2)))
 		psth = psth/sum(psth)
 		return psth,time_bins
 	
-def uniform_psth(duration,sim_dt,):
-		time_bins = np.arange(0,duration,sim_dt)
-		psth = np.ones(time_bins.shape)*sim_dt/second
+def uniform_psth(duration,dt,):
+		time_bins = np.arange(0,duration,dt)
+		psth = np.ones(time_bins.shape)*dt/second
 		return psth,time_bins
 
 def spikes_from_psth(psth):
 	return np.random.binomial(1,psth)
 
-def generate_population_spikes(kernel,rates,sim_dt):
+def generate_population_spikes(kernel,rates,dt):
 	spikes = []
 	ind = []
 	for i,r in enumerate(rates):
@@ -214,7 +414,7 @@ def generate_population_spikes(kernel,rates,sim_dt):
 		this_ind = np.ones(this_spikes.shape) * i
 		spikes.append(this_spikes)
 		ind.append(this_ind)
-	spikes = np.concatenate(spikes) *sim_dt
+	spikes = np.concatenate(spikes) *dt
 	ind = np.concatenate(ind).astype(int)
 	return spikes, ind      
 
@@ -231,20 +431,24 @@ def initialize_inputs(ags, ngs, num_trials, trial_durations ):
 			inputs[trial][at]['indices'] = ag._neuron_index
 		for nt,ng in ngs.items():
 			inputs[trial][nt] = {}
-			inputs[trial][nt]['I_ex'] = ng.namespace['I_ex_array']
+			inputs[trial][nt]['I_ex'] = ng.namespace['I_ex_array'].copy()
 		inputs[trial]['trial_duration'] = trial_durations[trial]
 	return inputs
 
-def concat_inputs(inputs,sim_objects):
+def initialize_simulation():
+	pass #todo
+
+def concat_inputs(sim_objects):
 	I_ex_arrays ={}
-	for nt in sim_objects['neuron_groups'].keys():
+	inputs = sim_objects['inputs']
+	for nt in sim_objects['ngs'].keys():
 		I_ex_arrays[nt]=[]
 		for trial,this_input in inputs.items():
 			I_ex_arrays[nt].append(this_input[nt]['I_ex'])
 		I_ex_arrays[nt] = np.concatenate(I_ex_arrays[nt])
 	#need to test    
 	ag_inputs_full_trial = {}
-	for at in sim_objects['afferent_groups'].keys():
+	for at in sim_objects['ags'].keys():
 		ag_inputs_full_trial[at] = {}
 		t_start = 0 * second
 		ag_inputs_full_trial[at]['spike_times'] =[]
@@ -256,6 +460,53 @@ def concat_inputs(inputs,sim_objects):
 		ag_inputs_full_trial[at]['spike_times'] =np.concatenate(ag_inputs_full_trial[at]['spike_times'])*second
 		ag_inputs_full_trial[at]['indices'] =np.concatenate(ag_inputs_full_trial[at]['indices'])
 	return I_ex_arrays,ag_inputs_full_trial
+
+def spikes_to_df(sim_objects):
+	spike_mon_nts = sim_objects['spike_mons'].keys()
+	inputs = sim_objects['inputs']
+	df_list = []
+	for nt in spike_mon_nts:
+		spike_trains = sim_objects['spike_mons'][nt].spike_trains()
+		for i, times in spike_trains.items():
+			df = pd.DataFrame(times,columns =['t'])
+			df['i'] = i
+			df['type'] = nt
+			df['neuron'] = True
+			df['afferent'] = False
+			df_list.append(df)
+	I_ex_arrays,ag_inputs_full_trial = concat_inputs(sim_objects)
+			
+	for at in ag_inputs_full_trial.keys():
+		spike_trains = ag_inputs_full_trial[at]
+		df = pd.DataFrame({'i':spike_trains['indices'],'t':spike_trains['spike_times']})
+		df['type'] = at
+		df['neuron'] = True
+		df['afferent'] = False
+		df_list.append(df)
+		
+	#unique neuron IDs
+	spikes_df = pd.concat(df_list)
+	grp = spikes_df.groupby(['type','i']).size().reset_index().reset_index()
+	grp['ID'] = grp['index']
+	grp = grp[['type','i','ID']]
+	spikes_df = spikes_df.merge(grp,on = ['type','i'])
+
+	#assign trials
+	spikes_df['trial'] = 0
+	spikes_df['trial_start'] = 0
+	spikes_df['trial_end'] = 0
+	spikes_df['trial_duration'] = 0
+	t_start = 0
+	for trial,this_input in inputs.items():
+		this_dur = this_input['trial_duration']/second
+		t_end = t_start + this_dur
+		ind = (spikes_df['t']>=t_start) & (spikes_df['t']<t_end)
+		spikes_df.loc[ind,'trial'] = trial
+		spikes_df.loc[ind,'trial_start'] = t_start
+		spikes_df.loc[ind,'trial_end'] = t_end
+		spikes_df.loc[ind,'trial_duration'] = this_dur
+		t_start += this_dur
+	return spikes_df
 
 def make_active_inds_binary(frac_active, N):
 	num_active = np.round(frac_active * N).astype(int)
@@ -275,7 +526,7 @@ def get_trialwise_spikes(inputs, sim_objects):
 		trial_duration = this_input['trial_duration']
 		trial_end = trial_start + trial_duration
 		for nt in sim_objects['spike_mons'].keys():
-			N = sim_objects['neuron_groups'][nt].N
+			N = sim_objects['ngs'][nt].N
 			observed_spikes[trial][nt]={}
 			observed_spikes[trial][nt]['counts'] = []
 			observed_spikes[trial][nt]['rates'] = []
@@ -330,13 +581,13 @@ def gen_s_w_update_funcs(s,s_names = None):
 def wrap_update_intrinsics(ng, var_name):
 	ng
 	# def update_intrinsics(x):
-	# 	this_unit = ng.namespace[var_name].in_best_unit(python_code= True).split()[-1]
-	# 	temp_str = str(x) +'* ' +this_unit
-	# 	ng.namespace[var_name] = eval(temp_str)
+	#   this_unit = ng.namespace[var_name].in_best_unit(python_code= True).split()[-1]
+	#   temp_str = str(x) +'* ' +this_unit
+	#   ng.namespace[var_name] = eval(temp_str)
 	def update_intrinsics(x):
-            this_unit = get_unit_for_display(ng.namespace[var_name].dim)
-            temp_str = str(x) + '*' + this_unit
-            ng.namespace[var_name] = eval(temp_str)
+			this_unit = get_unit_for_display(ng.namespace[var_name].dim)
+			temp_str = str(x) + '*' + this_unit
+			ng.namespace[var_name] = eval(temp_str)
 	new_func = update_intrinsics
 	return new_func
 
@@ -349,20 +600,22 @@ def gen_intrinsics_update_funcs(ngs,ng_var_pairs_list):
 
 	
 
-def run_sim(sim_objects, inputs, target_outputs, cost_func):
+def run_sim(sim_objects, cost_func):
 	# inputs: dictionary with fields 'ag_rates','ng_I_ex', 'num_trials'
 	# sim_objects: dictionary with fields 'network','neuron_group_list','afferent_group_list','synapse_list'
-			
-	I_ex_full, ag_inputs_full = concat_inputs(inputs,sim_objects)
-	for nt,ng in sim_objects['neuron_groups'].items():
-		ng.set_I_ex_from_array(I_ex_full[nt],sim_objects['sim_dt'])
-	for at,ag in sim_objects['afferent_groups'].items():
+	target_outputs = sim_objects['target_outputs']		
+	I_ex_full = sim_objects['I_ex_arrays']
+	ag_inputs_full = sim_objects['ag_inputs_full_trial']
+	inputs = sim_objects['inputs']
+	for nt,ng in sim_objects['ngs'].items():
+		ng.set_I_ex_from_array(I_ex_full[nt],sim_objects['dt'])
+	for at,ag in sim_objects['ags'].items():
 		ag.set_spikes(indices = ag_inputs_full[at]['indices'], times = ag_inputs_full[at]['spike_times']) 
 	
 	num_trials = len(inputs)
 	for trial in range(num_trials):
 		duration = inputs[trial]['trial_duration']
-		for nt,ng in sim_objects['neuron_groups'].items():
+		for nt,ng in sim_objects['ngs'].items():
 			ng.reset_variables()
 #         for at,ag in ags.items():
 #             spike_times = inputs[trial][at]['spike_times']
@@ -405,7 +658,18 @@ def initialize_bounds(update_funcs):
 	init_vals = {}
 	for uf_key in uf_keys:
 		if type(uf_key) is tuple:
-			init_vals[uf_key] = sim_objects['neuron_groups'][uf_key[0]].namespace[uf_key[1]]
+			init_vals[uf_key] = sim_objects['ngs'][uf_key[0]].namespace[uf_key[1]]
 		elif type(uf_key) is str:
 			init_vals[uf_key] = np.mean(sim_objects['synapses'][uf_key].w)
 	return init_vals
+
+def make_all_sim_spikes_pretty(sim_objects):
+	for nt in sim_objects['ngs'].keys():
+		make_spikes_pretty(sim_objects['spike_mons'][nt],sim_objects['state_mons'][nt],spike_height = 0.040)
+
+def make_spikes_pretty(spike_mon,state_mon,spike_height = 0.040):
+	inds = spike_mon.i
+	time_inds = spike_mon.t/defaultclock.dt
+	time_inds = time_inds.astype(int)
+	for i,t in zip(inds,time_inds):
+		state_mon.v_[i,t] = spike_height
