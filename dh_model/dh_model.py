@@ -20,6 +20,7 @@ class sim(dict):
 		self['Ns'] = []
 		self['spike_mons'] = []
 		self['state_mons'] = []
+		
 	
 	def initialize_sim_objects(self):
 		ngs = {}

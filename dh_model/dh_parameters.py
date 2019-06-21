@@ -19,6 +19,7 @@ def LIF_intrinsics(E_l = -70 * mV,
 		   I_ex_mu = 0 * pA,
 		   I_ex_sigma = 0 * pA):
 
+
 		intrinsics = {}
 		intrinsics['E_l'] = E_l 
 		intrinsics['E_e'] = E_e 
