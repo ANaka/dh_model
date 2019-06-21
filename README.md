@@ -1,6 +1,6 @@
 # dh_model
 
-##To install 
+## To install 
 (requires an Anaconda distribution)
 
 1. Download zip or git clone repository
